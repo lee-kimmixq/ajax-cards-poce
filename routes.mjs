@@ -3,6 +3,7 @@ import db from './models/index.mjs';
 
 // import your controllers here
 import initUsersController from './controllers/users.mjs';
+import initGamesController from './controllers/games.mjs';
 
 const getHash = (input) => {
   const shaObj = new jsSHA('SHA-512', 'TEXT', { encoding: 'UTF8' });
@@ -36,17 +37,22 @@ const checkAuth = (req, res, next) => {
 export default function bindRoutes(app) {
   // initialize the controller functions here
   // pass in the db for all callbacks
-  const userController = initUsersController(db);
+  const usersController = initUsersController(db);
+  const gamesController = initGamesController(db);
 
   // define your route matchers here using app
   app.get('/', checkAuth, (req, res) => { res.render('home'); }); // if logged in, render homepage
 
   app.get('/login', checkAuth, (req, res) => { res.redirect('/'); }); // if logged in, redirect to homepage
-  app.post('/login', userController.logIn);
-  app.post('/signup', userController.signUp);
+  app.post('/login', usersController.logIn);
+  app.post('/signup', usersController.signUp);
   app.delete('/logout', (req, res) => {
     res.clearCookie('userId');
     res.clearCookie('loggedIn');
     res.redirect('login');
   });
+
+  app.post('/games', gamesController.create);
+  app.get('/games/:id', gamesController.get);
+  app.put('/games/:id/deal', gamesController.deal);
 }
