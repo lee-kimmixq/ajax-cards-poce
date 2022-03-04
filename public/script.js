@@ -1,5 +1,7 @@
 let currentGame = null;
 
+// ============================ DOM HELPERS =====================================
+
 const createContainer = (conId, conColour, parent) => {
   const newDiv = document.createElement('div');
   newDiv.id = conId;
@@ -28,13 +30,18 @@ const createCard = (card, parent) => {
   return newDiv;
 };
 
+// ============================ BUTTON CALLBACKS =====================================
+
 const refreshGame = () => {
   axios.get(`/games/${currentGame.id}`)
     .then((res) => {
       const cardsDiv = document.querySelector('#cards-container');
       cardsDiv.innerHTML = '';
-      createCard(res.data.playerHand[0], cardsDiv);
-      createCard(res.data.playerHand[1], cardsDiv);
+      createCard(res.data.player1Hand[0], cardsDiv);
+      createCard(res.data.player1Hand[1], cardsDiv);
+      createCard(res.data.player2Hand[0], cardsDiv);
+      createCard(res.data.player2Hand[1], cardsDiv);
+      cardsDiv.innerHTML += `<p>Winner: ${res.data.winner}`;
     })
     .catch((err) => { console.log(err); });
 };
@@ -44,11 +51,16 @@ const dealCards = () => {
     .then((res) => {
       const cardsDiv = document.querySelector('#cards-container');
       cardsDiv.innerHTML = '';
-      createCard(res.data.playerHand[0], cardsDiv);
-      createCard(res.data.playerHand[1], cardsDiv);
+      createCard(res.data.player1Hand[0], cardsDiv);
+      createCard(res.data.player1Hand[1], cardsDiv);
+      createCard(res.data.player2Hand[0], cardsDiv);
+      createCard(res.data.player2Hand[1], cardsDiv);
+      cardsDiv.innerHTML += `<p>Winner: ${res.data.winner}`;
     })
     .catch((err) => { console.log(err); });
 };
+
+// ====================================================================================
 
 const startGame = () => {
   axios.post('/games')
