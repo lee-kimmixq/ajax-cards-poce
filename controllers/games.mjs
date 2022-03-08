@@ -34,10 +34,16 @@ const makeDeck = () => {
         cardName = 'K';
       }
 
+      let cardRank = j;
+
+      if (cardRank > 10) {
+        cardRank = 10;
+      }
+
       const card = {
         name: cardName,
         suit: currentSuit,
-        rank: j,
+        rank: cardRank,
       };
       deck.push(card);
     }
@@ -68,18 +74,26 @@ export default function initGamesController(db) {
 
     try {
       const user = await db.User.findByPk(req.cookies.userId); // find current user
-      // TODO error
-      const game = await user.createGame(newGame); // create row in games and games_users table
-      // TODO error
+      if (!user) throw new Error('cannot find user');
+
+      const game = await db.Game.create(newGame); // create row in games table
+      if (!game) throw new Error('cannot create new game');
+
       const opponent = await db.User.findOne({ // find a random user that is NOT current user
         where: { id: { [Op.not]: req.cookies.userId } },
         order: Sequelize.literal('random()'),
       });
-      // TODO error
-      await game.addUser(opponent); // create row for opponent in games_users table
+      if (!opponent) throw new Error('cannot find opponent');
+
+      // !!! PLAYER NUMBER AND SCORE NOT LOGGED IN DB !!!
+      // create row in games_users table
+      await game.addUser(user, { through: { playerNumber: 1, score: 0 } });
+      // create row for opponent in games_users table
+      await game.addUser(opponent, { through: { playerNumber: 1, score: 0 } });
 
       res.send({
         id: game.id,
+        user: user.email,
         opponent: opponent.email,
       });
     } catch (error) {
@@ -88,9 +102,11 @@ export default function initGamesController(db) {
   };
 
   const get = async (req, res) => {
+    const { id } = req.params;
+
     try {
-      const game = await db.Game.findByPk(req.params.id);
-      // TODO error
+      const game = await db.Game.findByPk(id);
+      if (!game) throw new Error('cannot find game');
 
       res.send({
         player1Hand: game.gameState.player1Hand,
@@ -107,17 +123,21 @@ export default function initGamesController(db) {
 
     try {
       const game = await db.Game.findByPk(id);
-      // TODO error
+      if (!game) throw new Error('cannot find game');
 
       // make sure that deck has at least 4 cards, if not make new deck
       if (game.gameState.cardDeck.length < 4) {
         game.gameState.cardDeck = shuffleCards(makeDeck());
       }
 
+      // deal 2 cards to each player
       const player1Hand = [game.gameState.cardDeck.pop(), game.gameState.cardDeck.pop()];
       const player2Hand = [game.gameState.cardDeck.pop(), game.gameState.cardDeck.pop()];
+
+      // calculate card ranks to get winner
       const winner = getWinner(player1Hand, player2Hand);
 
+      // update db
       await game.update({
         gameState: {
           cardDeck: game.gameState.cardDeck,
